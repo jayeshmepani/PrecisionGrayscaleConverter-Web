@@ -1,0 +1,88 @@
+@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #14B8A6;
+  --color-primary-hover: #0D9488;
+  --color-dark-bg: #111827;
+  --color-dark-card: #1F2937;
+  --color-dark-input: #374151;
+  --color-dark-border: #4B5563;
+  --color-dark-text-main: #F9FAFB;
+  --color-dark-text-secondary: #9CA3AF;
+}
+
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-bold rounded-lg shadow-sm text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-bg focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-[1.02];
+  }
+
+  .label-text {
+    @apply block text-sm font-medium text-dark-text-secondary;
+  }
+
+  .card {
+    @apply bg-dark-card p-6 rounded-xl shadow-lg border border-dark-border/50;
+  }
+
+  .input-field {
+    @apply block w-full bg-dark-input border-dark-border text-dark-text-main rounded-lg shadow-sm focus:ring-primary focus:border-primary transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed;
+
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+  }
+
+  .input-field option:disabled {
+    @apply text-dark-text-secondary;
+  }
+
+  .checkbox-input {
+    @apply h-5 w-5 text-primary bg-dark-input border-dark-border rounded focus:ring-primary focus:ring-offset-dark-bg disabled:opacity-60;
+  }
+
+  .mode-btn {
+    @apply w-full py-2 px-4 rounded-md text-sm font-semibold text-dark-text-secondary hover:bg-dark-border/50 transition-colors duration-200;
+  }
+
+  .mode-btn.active {
+    @apply bg-primary text-white shadow-md;
+  }
+
+  .drop-zone-shared {
+    @apply relative block w-full h-64 border-2 border-dashed border-dark-border rounded-xl p-12 text-center hover:border-primary cursor-pointer transition-all duration-300 flex flex-col items-center justify-center bg-dark-card/50 hover:bg-dark-card;
+  }
+
+  .range-slider {
+    @apply w-full h-2 bg-dark-input rounded-lg appearance-none cursor-pointer mt-2 accent-primary;
+  }
+
+  .notification {
+    @apply text-white font-medium py-3 px-5 rounded-lg shadow-xl transform translate-y-2 opacity-0 transition-all duration-300 ease-out;
+  }
+
+  .notification.show {
+    @apply translate-y-0 opacity-100;
+  }
+}
+
+@layer utilities {
+  .drag-over {
+    @apply border-primary ring-4 ring-primary/30 ring-offset-4 ring-offset-dark-bg;
+  }
+
+  .control-disabled {
+    @apply opacity-50 pointer-events-none;
+  }
+}

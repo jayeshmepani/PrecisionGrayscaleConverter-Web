@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+Jinja2
+python-multipart
+numpy
+Pillow
+tifffile
+imageio
+pillow-heif
+zipstream-ng
