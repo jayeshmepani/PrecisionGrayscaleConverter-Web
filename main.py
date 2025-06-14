@@ -1,9 +1,10 @@
 import io
 import os
 import uuid
-import shutil
 import traceback
 from pathlib import Path
+from contextlib import asynccontextmanager
+
 import zipstream
 import numpy as np
 from PIL import Image, ImageGrab, PngImagePlugin, ExifTags, TiffImagePlugin
@@ -12,7 +13,6 @@ import imageio.v2 as imageio
 
 try:
     import pillow_heif
-
     pillow_heif.register_heif_opener()
 except ImportError:
     pass
@@ -22,13 +22,24 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-app = FastAPI(title="Enhanced Grayscale Converter API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("Application startup: Cleaning temporary directory...")
+    for filename in os.listdir(TEMP_DIR):
+        if filename != ".gitkeep":
+            try:
+                os.remove(TEMP_DIR / filename)
+            except OSError as e:
+                print(f"Could not remove temporary file {filename}: {e}")
+    yield
+    print("Application shutdown.")
+
+app = FastAPI(title="Enhanced Grayscale Converter API", lifespan=lifespan)
 TEMP_DIR = Path("temp_output")
 TEMP_DIR.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/temp", StaticFiles(directory=TEMP_DIR), name="temp")
 templates = Jinja2Templates(directory="templates")
-
 
 def analyze_image_properties(image: Image.Image):
     info = {
@@ -40,10 +51,10 @@ def analyze_image_properties(image: Image.Image):
     info["icc_profile"] = image.info.get("icc_profile")
     info["dpi"] = image.info.get("dpi")
     try:
-        dtype_str = str(np.array(image).dtype)
-        if "16" in dtype_str:
+        np_array = np.array(image)
+        if np_array.dtype == np.uint16:
             info["bit_depth"] = 16
-        elif "32" in dtype_str:
+        elif np_array.dtype == np.uint32 or np_array.dtype == np.float32:
             info["bit_depth"] = 32
         else:
             info["bit_depth"] = 8
@@ -57,8 +68,7 @@ def analyze_image_properties(image: Image.Image):
     )
     return info
 
-
-def convert_to_enhanced_grayscale(image: Image.Image, mode: str, target_bit_depth: int):
+def convert_to_enhanced_grayscale(image: Image.Image, mode: str, target_bit_depth: int, source_bit_depth: int):
     has_alpha = "A" in image.getbands()
     alpha_image_out = image.getchannel("A") if has_alpha else None
 
@@ -77,11 +87,8 @@ def convert_to_enhanced_grayscale(image: Image.Image, mode: str, target_bit_dept
         _, _, v_channel = rgb_image.convert("HSV").split()
         final_array = np.array(v_channel)
     else:
-        source_is_16bit_depth = hasattr(image, "dtype") and np.issubdtype(
-            image.dtype, np.uint16
-        )
         source_dtype = np.float32
-        if source_is_16bit_depth:
+        if source_bit_depth > 8:
             rgb_array = np.array(rgb_image.convert("RGB"), dtype=source_dtype) / 65535.0
         else:
             rgb_array = np.array(rgb_image.convert("RGB"), dtype=source_dtype) / 255.0
@@ -125,7 +132,6 @@ def convert_to_enhanced_grayscale(image: Image.Image, mode: str, target_bit_dept
 
     return final_array, alpha_image_out
 
-
 def perform_save(
     gray_array: np.ndarray,
     alpha_image: Image.Image,
@@ -155,27 +161,17 @@ def perform_save(
         if settings.get("dpi"):
             save_kwargs["dpi"] = (settings["dpi"], settings["dpi"])
 
-    # Detect if saving to a BytesIO buffer and set format explicitly
     is_buffer = isinstance(filepath, io.BytesIO)
     format_map = {
-        ".jpeg": "JPEG",
-        ".jpg": "JPEG",
-        ".png": "PNG",
-        ".tiff": "TIFF",
-        ".webp": "WEBP",
-        ".bmp": "BMP",
-        ".heic": "HEIF",
-        ".heif": "HEIF",
+        ".jpeg": "JPEG", ".jpg": "JPEG", ".png": "PNG", ".tiff": "TIFF",
+        ".webp": "WEBP", ".bmp": "BMP", ".heic": "HEIF", ".heif": "HEIF",
     }
     file_format = format_map.get(file_ext, None)
 
-    if file_ext == ".jpeg":
+    if file_ext in [".jpg", ".jpeg"]:
         final_image = final_image.convert("L")
         save_kwargs.update(
-            {
-                "quality": settings.get("quality", 100),
-                "subsampling": settings.get("subsampling", 0),
-            }
+            {"quality": settings.get("quality", 100), "subsampling": settings.get("subsampling", 0)}
         )
         if is_buffer:
             final_image.save(filepath, format=file_format, **save_kwargs)
@@ -199,51 +195,32 @@ def perform_save(
 
     elif file_ext == ".tiff":
         if is_high_bit_depth and has_alpha:
-            alpha_arr = (
-                np.array(alpha_image.convert("L"), dtype=np.uint32) * 257
-            ).astype(np.uint16)
+            alpha_arr = (np.array(alpha_image.convert("L"), dtype=np.uint32) * 257).astype(np.uint16)
             stacked = np.stack([gray_array, alpha_arr], axis=-1)
-            if is_buffer:
-                tifffile.imwrite(
-                    filepath,
-                    stacked,
-                    photometric="minisblack",
-                    extratasamples=["unassalpha"],
-                )
-            else:
-                tifffile.imwrite(
-                    filepath,
-                    stacked,
-                    photometric="minisblack",
-                    extratasamples=["unassalpha"],
-                )
+            tifffile.imwrite(
+                filepath, stacked, photometric="minisblack", extrasamples=["unassalpha"]
+            )
         else:
             if has_alpha:
-                final_image = Image.merge(
-                    "LA", (final_image.convert("L"), alpha_image.convert("L"))
-                )
+                final_image = Image.merge("LA", (final_image.convert("L"), alpha_image.convert("L")))
             if is_buffer:
                 final_image.save(filepath, format=file_format, **save_kwargs)
             else:
                 final_image.save(filepath, "TIFF", **save_kwargs)
 
-    else:
+    else: # Handles PNG, WEBP, BMP, etc.
         if has_alpha and file_ext in [".png", ".webp"]:
-            if final_image.mode != "LA":
-                final_image = Image.merge(
-                    "LA", (final_image.convert("L"), alpha_image.convert("L"))
-                )
-        else:
-            if final_image.mode != "L" and final_image.mode != "I;16":
-                final_image = final_image.convert(
-                    "L" if not is_high_bit_depth else "I;16"
-                )
+            if is_high_bit_depth:
+                print("WARNING: Saving 16-bit PNG/WEBP without alpha channel as it is not supported by the library's high-level API. Use TIFF for 16-bit with alpha.")
+                pass 
+            else:
+                if final_image.mode != "LA":
+                    final_image = Image.merge("LA", (final_image.convert("L"), alpha_image.convert("L")))
+        
         if is_buffer:
             final_image.save(filepath, format=file_format, **save_kwargs)
         else:
-            final_image.save(
-                filepath, file_format if file_format else None, **save_kwargs
-            )
+            final_image.save(filepath, file_format if file_format else None, **save_kwargs)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -271,22 +248,19 @@ async def handle_conversion(
         original_image = Image.open(io.BytesIO(contents))
         original_image.load()
         original_info = analyze_image_properties(original_image)
-
         settings = locals()
         del settings["request"], settings["file"], settings["contents"]
         settings["size"] = (
             (width, height) if width > 0 and height > 0 else original_info["size"]
         )
-
+        
         gray_array, alpha_channel = convert_to_enhanced_grayscale(
-            original_image, settings["conversion_mode"], settings["bit_depth"]
+            original_image, settings["conversion_mode"], settings["bit_depth"], original_info["bit_depth"]
         )
-
+        
         output_filename = f"{uuid.uuid4()}{settings['output_format']}"
         output_path = TEMP_DIR / output_filename
-
         perform_save(gray_array, alpha_channel, output_path, settings, original_info)
-
         return JSONResponse(
             content={
                 "success": True,
@@ -323,39 +297,32 @@ async def handle_batch_conversion(
                 original_image = Image.open(io.BytesIO(contents))
                 original_image.load()
                 original_info = analyze_image_properties(original_image)
-
                 current_settings = settings.copy()
                 current_settings["size"] = (
                     (settings["width"], settings["height"])
                     if settings.get("width") and settings.get("height")
                     else original_info["size"]
                 )
-
+                
                 gray_array, alpha_channel = convert_to_enhanced_grayscale(
                     original_image,
                     current_settings["conversion_mode"],
                     current_settings["bit_depth"],
+                    original_info["bit_depth"]
                 )
+                
                 output_buffer = io.BytesIO()
-                # Pass format explicitly for BytesIO
                 perform_save(
-                    gray_array,
-                    alpha_channel,
-                    output_buffer,
-                    current_settings,
-                    original_info,
+                    gray_array, alpha_channel, output_buffer, current_settings, original_info
                 )
                 output_buffer.seek(0)
                 new_filename = f"{Path(file.filename).stem}_grayscale{current_settings['output_format']}"
                 yield new_filename, output_buffer.read()
             except Exception as e:
                 print(f"Batch convert error for {file.filename}: {e}")
-                import traceback
-
                 traceback.print_exc()
                 continue
 
-    # Use zipstream-ng ZipStream
     zip_stream = zipstream.ZipStream()
     for filename, data in image_generator():
         zip_stream.add(io.BytesIO(data), filename)
@@ -363,13 +330,3 @@ async def handle_batch_conversion(
     response = StreamingResponse(zip_stream, media_type="application/x-zip-compressed")
     response.headers["Content-Disposition"] = "attachment; filename=grayscale_batch.zip"
     return response
-
-
-@app.on_event("startup")
-async def startup_event():
-    for filename in os.listdir(TEMP_DIR):
-        if filename != ".gitkeep":
-            try:
-                os.remove(TEMP_DIR / filename)
-            except OSError:
-                pass

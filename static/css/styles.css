@@ -85,7 +85,8 @@ figure {
 #output-format,
 #bit-depth,
 #conversion-mode,
-input {
+#subsampling input,
+select {
     padding: 0.5ch 0.5ch 0.5ch 1.5ch;
 }
 
