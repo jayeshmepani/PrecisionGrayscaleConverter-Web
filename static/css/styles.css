@@ -86,8 +86,10 @@ figure {
 #bit-depth,
 #conversion-mode,
 #subsampling input,
-select {
-    padding: 0.5ch 0.5ch 0.5ch 1.5ch;
+#editing-view-port,
+select,
+input {
+    padding: 0.5ch 0.5ch 0.5ch 1.5ch !important;
 }
 
 .second {
