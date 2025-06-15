@@ -8,3 +8,4 @@ tifffile
 imageio
 pillow-heif
 zipstream-ng
+opencv-python

@@ -6,7 +6,7 @@ A modern web app for high-quality grayscale image conversion and batch processin
 
 - **Single & Batch Image Conversion**: Convert one or many images at once.
 - **Advanced Grayscale Modes**: Choose from Rec. 709, L*a*b\*, HSL, HSV, and more.
-- **High Bit Depth Support**: 8, 10, and 16-bit output for maximum quality.
+- **High Bit Depth Support**: 8, 16-bit output for maximum quality.
 - **Format Options**: PNG, JPEG, HEIC, TIFF, WEBP, BMP.
 - **Chroma Subsampling & Quality Controls**: Always defaults to best quality (4:4:4, quality=100).
 - **Preserve Transparency**: Optionally keep alpha channels.

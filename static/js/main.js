@@ -26,10 +26,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const FORMAT_CAPABILITIES = {
-        // Correctly define PNG alpha capability as a function of bit depth
-        '.png': { bitDepths: [8, 16], alpha: (bitDepth) => bitDepth === 8, quality: false, subsampling: false },
+        '.png': { bitDepths: [8, 16], alpha: true, quality: false, subsampling: false },
         '.jpeg': { bitDepths: [8], alpha: false, quality: true, subsampling: true },
-        '.heic': { bitDepths: [8, 10], alpha: (bitDepth) => bitDepth === 8, quality: true, subsampling: true },
+        '.heic': { bitDepths: [8], alpha: (bitDepth) => bitDepth === 8, quality: true, subsampling: true },
         '.tiff': { bitDepths: [8, 16], alpha: true, quality: false, subsampling: false },
         '.webp': { bitDepths: [8], alpha: true, quality: true, subsampling: false },
         '.bmp': { bitDepths: [8], alpha: false, quality: false, subsampling: false },
@@ -47,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <p class="text-sm text-dark-text-secondary/80">You can also paste an image from clipboard</p>
             <input type="file" class="file-input absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept="image/*,.heic,.heif" multiple>
         `,
-        settingsControls: `<h3 class="text-xl font-semibold text-white">Conversion Settings</h3><div><label for="conversion-mode" class="label-text">Conversion Mode</label><select id="conversion-mode" name="conversion_mode" class="input-field mt-1"><option>L*a*b* (L*)</option><option>Gamma</option><option selected>Rec. 709</option><option>HSL (Lightness)</option><option>HSV (Value)</option><option>Rec. 601</option><option>Rec. 2100</option></select></div><div class="grid grid-cols-2 gap-4"><div><label for="output-format" class="label-text">Format</label><select id="output-format" name="output_format" class="input-field mt-1"><option value=".png">PNG</option><option value=".jpeg">JPEG</option><option value=".heic">HEIC</option><option value=".tiff">TIFF</option><option value=".webp">WEBP</option><option value=".bmp">BMP</option></select></div><div><label for="bit-depth" class="label-text">Bit Depth</label><select id="bit-depth" name="bit_depth" class="input-field mt-1"><option value="8">8-bit</option><option value="10">10-bit</option><option value="16">16-bit</option></select></div></div><div id="quality-options" class="hidden"><label for="quality" class="label-text flex justify-between"><span>Quality</span><span id="quality-value" class="font-semibold">100%</span></label><input type="range" id="quality" name="quality" min="1" max="100" value="100" class="range-slider"></div><div id="subsampling-options" class="hidden"><label for="subsampling" class="label-text">Chroma Subsampling</label><select id="subsampling" name="subsampling" class="input-field mt-1"><option value="0" selected>4:4:4 (Best)</option><option value="1">4:2:2 (High)</option><option value="2">4:2:0 (Standard)</option></select></div><div id="dimension-controls"><label class="label-text">Dimensions (WxH)</label><div class="flex items-center space-x-2 mt-1"><input type="number" id="width" name="width" placeholder="Auto" class="input-field"><input type="number" id="height" name="height" placeholder="Auto" class="input-field"><button type="button" id="aspect-lock-btn" class="p-3 bg-primary/20 rounded-lg hover:bg-dark-border transition" title="Toggle Aspect Ratio Lock"><svg id="lock-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg><svg id="unlock-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-dark-text-secondary hidden" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zm1 11a1 1 0 11-2 0v-3a1 1 0 112 0v3zM12 7v2H8V7a2 2 0 114 0z" /></svg></button></div></div><div class="space-y-3 pt-2"><div id="alpha-control"><label class="flex items-center space-x-3 cursor-pointer"><input id="preserve-alpha" name="preserve_alpha" type="checkbox" class="checkbox-input"><span class="text-dark-text-main">Preserve Transparency</span></label><small id="alpha-warning" class="text-yellow-400 text-xs mt-1 ml-9" style="display: none;">16-bit transparency is only supported for TIFF format.</small></div><div><label class="flex items-center space-x-3 cursor-pointer"><input id="strip-metadata" name="strip_metadata" type="checkbox" class="checkbox-input"><span class="text-dark-text-main">Strip Metadata (EXIF, etc.)</span></label></div></div>`,
+        settingsControls: `<h3 class="text-xl font-semibold text-white">Conversion Settings</h3><div><label for="conversion-mode" class="label-text">Conversion Mode</label><select id="conversion-mode" name="conversion_mode" class="input-field mt-1"><option>L*a*b* (L*)</option><option>Gamma</option><option selected>Rec. 709</option><option>HSL (Lightness)</option><option>HSV (Value)</option><option>Rec. 601</option><option>Rec. 2100</option></select></div><div class="grid grid-cols-2 gap-4"><div><label for="output-format" class="label-text">Format</label><select id="output-format" name="output_format" class="input-field mt-1"><option value=".png">PNG</option><option value=".jpeg">JPEG</option><option value=".heic">HEIC</option><option value=".tiff">TIFF</option><option value=".webp">WEBP</option><option value=".bmp">BMP</option></select></div><div><label for="bit-depth" class="label-text">Bit Depth</label><select id="bit-depth" name="bit_depth" class="input-field mt-1"><option value="8">8-bit</option><option value="16">16-bit</option></select></div></div><div id="quality-options" class="hidden"><label for="quality" class="label-text flex justify-between"><span>Quality</span><span id="quality-value" class="font-semibold">100%</span></label><input type="range" id="quality" name="quality" min="1" max="100" value="100" class="range-slider"></div><div id="subsampling-options" class="hidden"><label for="subsampling" class="label-text">Chroma Subsampling</label><select id="subsampling" name="subsampling" class="input-field mt-1"><option value="0" selected>4:4:4 (Best)</option><option value="1">4:2:2 (High)</option><option value="2">4:2:0 (Standard)</option></select></div><div id="dimension-controls"><label class="label-text">Dimensions (WxH)</label><div class="flex items-center space-x-2 mt-1"><input type="number" id="width" name="width" placeholder="Auto" class="input-field"><input type="number" id="height" name="height" placeholder="Auto" class="input-field"><button type="button" id="aspect-lock-btn" class="p-3 bg-primary/20 rounded-lg hover:bg-dark-border transition" title="Toggle Aspect Ratio Lock"><svg id="lock-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-primary" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg><svg id="unlock-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-dark-text-secondary hidden" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2V7a5 5 0 00-5-5zm1 11a1 1 0 11-2 0v-3a1 1 0 112 0v3zM12 7v2H8V7a2 2 0 114 0z" /></svg></button></div></div><div class="space-y-3 pt-2"><div id="alpha-control"><label class="flex items-center space-x-3 cursor-pointer"><input id="preserve-alpha" name="preserve_alpha" type="checkbox" class="checkbox-input"><span class="text-dark-text-main">Preserve Transparency</span></label><small id="alpha-warning" class="text-yellow-400 text-xs mt-1 ml-9" style="display: none;">Note: Some viewers may not support 16-bit PNG with transparency.</small></div><div><label class="flex items-center space-x-3 cursor-pointer"><input id="strip-metadata" name="strip_metadata" type="checkbox" class="checkbox-input"><span class="text-dark-text-main">Strip Metadata (EXIF, etc.)</span></label></div></div>`,
         batchFileItem: (file) => `<div class="flex items-center bg-dark-card p-3 rounded-lg" data-filename="${file.name}"><div class="flex-shrink-0"><img src="${URL.createObjectURL(file)}" class="h-12 w-12 object-cover rounded-md"></div><div class="flex-grow ml-4"><p class="font-medium text-dark-text-main truncate">${file.name}</p><p class="text-sm text-dark-text-secondary">${(file.size / 1024 / 1024).toFixed(2)} MB</p></div><div class="flex-shrink-0 ml-4"><button class="remove-batch-item-btn text-dark-text-secondary hover:text-red-500 transition" title="Remove">✖</button></div></div>`
     };
 
@@ -88,10 +87,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         handleLivePreview();
 
-        // Add this new block to control the warning message
         const alphaWarning = document.getElementById('alpha-warning');
-        const isUnsupportedAlpha = bitDepth > 8 && (format === '.png' || format === '.webp');
-        alphaWarning.style.display = isUnsupportedAlpha ? 'block' : 'none';
+        const isPartiallySupportedAlpha = bitDepth > 8 && (format === '.webp' || format === '.heic');
+        alphaWarning.textContent = isPartiallySupportedAlpha ? 'High bit-depth transparency not supported for this format.' : 'Note: Some viewers may not support 16-bit PNG with transparency.';
+        const shouldShowWarning = (bitDepth > 8 && format === '.png') || isPartiallySupportedAlpha;
+        alphaWarning.style.display = shouldShowWarning ? 'block' : 'none';
     }
 
     function setupEventListeners() {
@@ -158,8 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         DOMElements.previewArea.classList.remove('hidden');
         DOMElements.originalInfo.textContent = 'Processing preview...';
         try {
-            const compressedFile = await imageCompression(file, { maxSizeMB: 2, useWebWorker: true });
-            const objectURL = URL.createObjectURL(compressedFile);
+            const objectURL = URL.createObjectURL(file);
             DOMElements.originalPreview.src = objectURL;
             DOMElements.grayscalePreview.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
             const img = new Image();
@@ -185,22 +184,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function removeBatchFile(filename) { batchFiles = batchFiles.filter(f => f.name !== filename); updateButtonState(); }
     function handleDragDrop(e) { e.preventDefault(); e.stopPropagation(); if (e.type === 'dragover') e.currentTarget.classList.add('drag-over'); else e.currentTarget.classList.remove('drag-over'); if (e.type === 'drop') handleFileSelection(e.dataTransfer.files); }
-    function handlePaste(e) { const file = (e.clipboardData || e.originalEvent.clipboardData).items[0]?.getAsFile(); if (file) { handleFileSelection([new File([file], `pasted-image-${new Date().getTime()}.png`, { type: file.type })]); } }
+    function handlePaste(e) { const file = (e.clipboardData || window.clipboardData).items[0]?.getAsFile(); if (file) { handleFileSelection([new File([file], `pasted-image-${new Date().getTime()}.png`, { type: file.type })]); } }
 
     async function handleFormSubmit(e) {
         e.preventDefault();
         const url = currentMode === 'single' ? '/api/convert' : '/api/batch-convert';
         const formData = new FormData(DOMElements.form);
-        if (currentMode === 'single' && singleFile) formData.append('file', singleFile, singleFile.name);
-        else if (currentMode === 'batch' && batchFiles.length > 0) batchFiles.forEach(file => formData.append('files', file, file.name));
-        else { showNotification('Please select at least one file.', true); return; }
+        if (currentMode === 'single' && singleFile) {
+            formData.append('file', singleFile, singleFile.name);
+        } else if (currentMode === 'batch' && batchFiles.length > 0) {
+            batchFiles.forEach(file => formData.append('files', file, file.name));
+        } else {
+            showNotification('Please select at least one file.', true);
+            return;
+        }
         setLoading(true);
         try {
             const response = await axios.post(url, formData, { responseType: currentMode === 'batch' ? 'blob' : 'json' });
             if (currentMode === 'single') {
                 const link = document.createElement('a');
                 link.href = response.data.download_url;
-                link.setAttribute('download', `${Path.basename(singleFile.name, Path.extname(singleFile.name))}_grayscale${getFormSettings().output_format}`);
+                const settings = getFormSettings();
+                const originalFilename = Path.basename(singleFile.name, Path.extname(singleFile.name));
+                link.setAttribute('download', `${originalFilename}_grayscale${settings.output_format}`);
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
