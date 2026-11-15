@@ -1,78 +1,68 @@
-# Enhanced Precision Grayscale Converter
+# Enhanced Precision Grayscale Converter — Web
 
-A modern web app for high-quality grayscale image conversion and batch processing, built with FastAPI (Python backend) and a responsive JavaScript frontend.
+A FastAPI web application for single-image and batch grayscale conversion. The responsive JavaScript interface sends selected images to the application's own FastAPI server for processing; images are not sent to a third-party image-conversion API.
 
 ## Features
 
-- **Single & Batch Image Conversion**: Convert one or many images at once.
-- **Advanced Grayscale Modes**: Choose from Rec. 709, L*a*b\*, HSL, HSV, and more.
-- **High Bit Depth Support**: 8, 16-bit output for maximum quality.
-- **Format Options**: PNG, JPEG, HEIC, TIFF, WEBP, BMP.
-- **Chroma Subsampling & Quality Controls**: Always defaults to best quality (4:4:4, quality=100).
-- **Preserve Transparency**: Optionally keep alpha channels.
-- **Metadata Handling**: Option to strip or preserve EXIF/ICC/DPI.
-- **Live Preview**: See before/after instantly in the browser.
-- **No Image Uploads Required**: All processing is local to your server.
+- Single-image and batch conversion.
+- Seven grayscale modes: Rec. 601, Rec. 709, Rec. 2100, Gamma-corrected Rec. 709, CIE L*a*b* L*, HSL Lightness, and HSV Value.
+- 8-bit and 16-bit grayscale output.
+- PNG, JPEG, HEIC/HEIF, TIFF, WEBP, and BMP export options (format/bit-depth support varies).
+- Optional transparency preservation where the selected output format supports it.
+- JPEG/HEIC quality controls and JPEG chroma-subsampling controls.
+- Optional metadata stripping; ICC profile and DPI metadata can be carried through supported save paths.
+- Adjustable output dimensions for single-image conversion.
+- ZIP download for batch output.
 
-## Quick Start
+## Requirements
 
-### 1. Install dependencies
+- Python 3
+- Dependencies listed in `requirements.txt`
+- Node.js/npm only when rebuilding the optional Tailwind CSS assets
+
+HEIC/HEIF support depends on `pillow-heif` and the available system codec support. TIFF handling uses `tifffile`.
+
+## Run locally
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+git clone https://github.com/jayeshmepani/PrecisionGrayscaleConverter-Web.git
+cd PrecisionGrayscaleConverter-Web
+
+python -m venv .venv
+# Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# Linux/macOS:
+# source .venv/bin/activate
+
 pip install -r requirements.txt
-npm install  # for Tailwind CSS (optional, for development)
-```
-
-### 2. Build CSS (optional, for development)
-
-```bash
-npm run build:css
-```
-
-### 3. Run the server
-
-```bash
 uvicorn main:app --reload --port 8001
 ```
 
-Then open [http://localhost:8001](http://localhost:8001) in your browser.
+Open http://127.0.0.1:8001.
 
-## Project Structure
-
-- `main.py` — FastAPI backend (image processing, API endpoints)
-- `static/` — JS, CSS, and assets
-- `templates/` — HTML templates (Jinja2)
-- `requirements.txt` — Python dependencies
-- `package.json`, `tailwind.config.js` — Frontend build config
-- `temp_output/` — Temporary output files (auto-created)
-
-## Troubleshooting
-
-### File Watch Limit Error
-
-If you see an error like `OS file watch limit reached` or similar when running the server with `--reload`, you may need to increase the file watch limit on your system.
-
-#### Linux (inotify limit)
+To rebuild frontend CSS when changing the Tailwind source/configuration:
 
 ```bash
-echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+npm install
+npm run build:css
 ```
 
-#### Windows (watch limit)
+## API
 
-- If you see errors about file watching on Windows, try running VS Code or your terminal as Administrator.
-- For WSL, use the Linux command above inside your WSL terminal.
-- If using Python's `watchdog` or similar, you may need to install the Windows C++ build tools or update your Python environment.
-- If issues persist, consider disabling `--reload` or reducing the number of watched files.
+| Route | Method | Purpose |
+|---|---|---|
+| `/` | GET | Web interface |
+| `/api/convert` | POST | Convert one uploaded image and return conversion metadata/result |
+| `/api/batch-convert` | POST | Convert multiple uploaded images and return a ZIP archive |
 
-### HEIC/HEIF Support
+Interactive API documentation is available at `/docs` while the server is running.
 
-- Requires `pillow-heif` (Python) and system libraries (libheif).
-- On Linux, install `libheif-dev` via your package manager (e.g., `sudo apt install libheif-dev`).
-- On Windows, use pre-built wheels for `pillow-heif` or see the [pillow-heif documentation](https://github.com/carsales/pyheif) for Windows support.
+## Processing and privacy
+
+Conversion happens on the FastAPI server that hosts this application, not locally inside the browser. Uploaded files are handled by that server, and temporary output is stored in the application's `temp_output/` directory. The startup lifecycle clears files in that directory. Deployments should use appropriate request limits, access controls, temporary-storage policies, and HTTPS.
+
+The conversion modes are mathematical transforms, not interchangeable standards. Gamma-corrected Rec. 709, Rec. 601/709/2100 luma weighting, CIE Lab L*, HSL lightness, and HSV value produce different results. Choose the mode appropriate to the intended workflow.
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).
