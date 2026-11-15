@@ -40,6 +40,14 @@ uvicorn main:app --reload --port 8001
 
 Open http://127.0.0.1:8001.
 
+## Tests
+
+Run the built-in regression tests for all seven conversion modes, bit-depth output, and alpha-channel handling:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
 To rebuild frontend CSS when changing the Tailwind source/configuration:
 
 ```bash
