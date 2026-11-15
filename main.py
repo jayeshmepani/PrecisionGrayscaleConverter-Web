@@ -85,15 +85,28 @@ def convert_to_enhanced_grayscale(image: Image.Image, mode: str, target_bit_dept
     elif cv_image.dtype != np.uint16: raise ValueError(f"Unsupported image dtype {cv_image.dtype}")
     B, G, R = cv2.split(cv_image)[:3]
     Rf, Gf, Bf = R.astype(np.float64)/65535.0, G.astype(np.float64)/65535.0, B.astype(np.float64)/65535.0
-    mode_map = {"Rec. 601": '601', "Rec. 709": '709', "Rec. 2100": '2100', "Gamma": 'gamma'}
-    script_mode = mode_map.get(mode, '709')
-    if script_mode == 'gamma':
+    rgb_float = np.stack([Rf, Gf, Bf], axis=-1)
+    if mode == "L*a*b* (L*)":
+        # OpenCV's float32 RGB-to-Lab conversion expects normalized RGB in [0, 1].
+        lab = cv2.cvtColor(rgb_float.astype(np.float32), cv2.COLOR_RGB2LAB)
+        gray_float = lab[:, :, 0].astype(np.float64) / 100.0
+    elif mode == "HSV (Value)":
+        gray_float = np.max(rgb_float, axis=-1)
+    elif mode == "HSL (Lightness)":
+        cmax = np.max(rgb_float, axis=-1)
+        cmin = np.min(rgb_float, axis=-1)
+        gray_float = (cmax + cmin) / 2.0
+    elif mode == "Gamma":
         Rl, Gl, Bl = to_linear(Rf), to_linear(Gf), to_linear(Bf)
         Yl = 0.2126 * Rl + 0.7152 * Gl + 0.0722 * Bl
         gray_float = to_srgb(Yl)
     else:
-        weights = {'601':(0.299,0.587,0.114),'709':(0.2126,0.7152,0.0722),'2100':(0.2627,0.6780,0.0593)}
-        wR, wG, wB = weights[script_mode]
+        weights = {
+            "Rec. 601": (0.299, 0.587, 0.114),
+            "Rec. 709": (0.2126, 0.7152, 0.0722),
+            "Rec. 2100": (0.2627, 0.6780, 0.0593),
+        }
+        wR, wG, wB = weights.get(mode, weights["Rec. 709"])
         gray_float = wR * Rf + wG * Gf + wB * Bf
     gray_float = np.clip(gray_float, 0, 1)
     if target_bit_depth == 16: multiplier, dtype = 65535, np.uint16
